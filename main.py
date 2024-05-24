@@ -53,9 +53,9 @@ def appsInfoToDOCX(doc, data):
                 cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
 
-# writes client information to a .docx file
-def clientInfoToDOCX(doc, json_data):
-    for item in json_data:
+# writes client information to the .docx report
+def clientInfoToDOCX(doc, clientInfo):
+    for item in clientInfo:
         for key, value in item.items():
             doc.add_heading(key.replace('_', ' ').title(), level=2)
             if isinstance(value, dict):
@@ -69,6 +69,21 @@ def clientInfoToDOCX(doc, json_data):
             else:
                 doc.add_paragraph(f"{key.replace('_', ' ').title()}: {value}")
             doc.add_paragraph()
+
+
+# writes the vulnerabilities information to the .docx report
+def vulnerabilitiesToDOCX(doc, vulnerabilities, app, version):
+    doc.add_page_break()
+    doc.add_heading(f"Vulnerabilities for {app} {version}", level=1)
+    for vuln in vulnerabilities:
+        doc.add_heading(vuln['CVE ID'], level=2)
+        doc.add_paragraph(f"Base severity: {vuln['Base severity']}")
+        doc.add_paragraph(f"Description: {vuln['Description']}")
+        doc.add_paragraph(f"Exploitability score: {vuln['Exploitability score']}")
+        doc.add_paragraph(f"Impact score: {vuln['Impact score']}")
+        doc.add_paragraph(f"Weaknesses: {vuln['Weaknesses']}")
+        doc.add_paragraph(f"Link: {vuln['Link']}")
+        doc.add_paragraph()
 
 
 # retrieves the possible CPEs for a given app name and version
@@ -156,16 +171,20 @@ def main():
     # main menu loop
     while not main_menu_exit:
         main_sel = main_menu.show()
+
+
         # FIRST OPTION: lists all currently connected clients
         if main_sel == 0:
             print("List of currently connected clients:\n")
             for client in vqm.getClients(args.config):
                 print("- " + client)
             input("\n\nPress Enter to go back to the main menu...")
+
+
+
         # SECOND OPTION: scan the apps installed in a client
         elif main_sel == 1:
             clients = vqm.getClients(args.config)
-            print("Select a client to scan:\n")
             # client menu configuration
             client_menu = TerminalMenu(
                 menu_entries=clients,
@@ -176,6 +195,7 @@ def main():
                 cycle_cursor=True,
                 clear_screen=True,
             )
+            print("Select a client to scan:\n")
             client_sel = client_menu.show()
             # .docx creation from JSON data
             doc = Document()
@@ -185,38 +205,66 @@ def main():
             apps = vqm.getApps(args.config, clients[client_sel])
             clientInfoToDOCX(doc, client_info)
             appsInfoToDOCX(doc, apps)
-            client_abreviation = clients[client_sel].split(".")[1]
-            doc.save(f"{client_abreviation}_Information_Report.docx")
             # remember 32 and 64 bit apps are separated
             apps_32 = apps[0]
             apps_64 = apps[1]
             print("List of installed applications:\n")
             # print the apps and search for possible CVEs
             max_name_length = max(len(app['DisplayName']) for app in apps_32 + apps_64)
+            vulnerable = []
+
+            # apps review loop
             for app in apps_32:
                 name = ' '.join(app['DisplayName'].split()[:2])
                 version = app['DisplayVersion']
                 if cpe := find_cpes(name, version):
+                    vulnerable.append(name)
                     cves = fetch_cve_details(cpe)
-                    #pp.pprint(f"[!] Vulnerabilities found for {app['DisplayName']} {version}\n")
-                    #pp.pprint(cves)
+                    vulnerabilitiesToDOCX(doc, cves, app['DisplayName'], version)
                     print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
-                    continue
+                    break # change to continue to show all vulnerable apps
                 print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
-            for app in apps_64:
-                name = ' '.join(app['DisplayName'].split()[:2])
-                version = app['DisplayVersion']
-                if cpe := find_cpes(name, version):
-                    cves = fetch_cve_details(cpe)
-                    #pp.pprint(f"[!] Vulnerabilities found for {app['DisplayName']} {version}\n")
-                    #pp.pprint(cves)
-                    pprint(cves)
-                    print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
-                    continue
-                print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
+            
+            # COMMENTED FOR TESTING
+            # for app in apps_64:
+            #     name = ' '.join(app['DisplayName'].split()[:2])
+            #     version = app['DisplayVersion']
+            #     if cpe := find_cpes(name, version):
+            #         vulnerable.append(name)
+            #         cves = fetch_cve_details(cpe)
+            #         # TODO: write the vulnerabilities to the .docx file
+            #         print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
+            #         continue
+            #     print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
 
+            # save the .docx file
+            client_abreviation = clients[client_sel].split(".")[1]
+            doc.save(f"{client_abreviation}_Information_Report.docx")
+
+            if vulnerable:
+                print(colored(f"\n\n[!] {len(vulnerable)} vulnerable applications found", "red"))
+                for app in vulnerable:
+                    print(colored(f"    - {app}", "red"))
+                option = input("\nWould you like to try to update the vulnerable applications? (y/n): ")
+                if option.lower() == "y":
+                    for app in vulnerable:
+                        print(f"Trying to update {app}...")
+                        # the standard in the repository is the app name with spaces replaced by underscores
+                        # the same way the app is searched in the NVD database, but with the replacement
+                        app = app.replace(" ", "_")
+                        print(f"Searching for {app}...")
+                        if(response := vqm.download(args.config, clients[client_sel], app) == 1):
+                            print("The app is not currently available in the repository.")
+                            continue
+                        vqm.installation(args.config, clients[client_sel], app)
+                        print(colored(f"{app} updated successfully!", "green"))
+                else:
+                    print("Exiting...")
+            else:
+                print(colored("\n\n[+] No vulnerable applications found", "green"))
             
             input("\n\nPress Enter to go back to the main menu...")
+
 
         # third option: do something else
         elif main_sel == 2:
@@ -263,9 +311,8 @@ def main():
                 clear_screen=True,
             )
             client_sel = client_menu.show()
-            response = vqm.powershell(args.config)[0]['Stdout']
-            formatted_response = response.replace('\r\n', '\n')
-            print(formatted_response)
+            response = vqm.installation(args.config, clients[client_sel], "powershell")
+            print(response)
             input("\n\nPress Enter to go back to the main menu...")
 
         elif main_sel == 4 or main_sel == None:

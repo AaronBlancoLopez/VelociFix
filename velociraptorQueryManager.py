@@ -112,16 +112,14 @@ def getApps(config, client):
     return packages
 
 
-# allows powershell commands to be executed on a specific client
-def powershell(config):
-    command = """ "C:/Users/Public/Downloads/" """
-    print(command)
+# downloads a file from the app repository to a specific client
+def download(config, client, app):
     channel = _connect_(config)
     # query definition
     vql_query = f'''
-        LET Command = "pwsh -Command '$cert=Get-ChildItem -Path Cert:\\\LocalMachine\\\My; Invoke-WebRequest -SkipCertificateCheck -Uri https://192.168.190.131/files/firefox.msi -Certificate $cert -OutFile \\"C:/Users/aaron/Desktop/prueba/\\"'"
+        LET Command = "pwsh -Command '$cert=Get-ChildItem -Path Cert:\\\LocalMachine\\\My; Invoke-WebRequest -SkipCertificateCheck -Uri https://192.168.190.131/files/{app}.msi -Certificate $cert -OutFile \\"C:/Users/Public/Downloads/\\"'"
         LET collection <= collect_client(
-            client_id='C.f81bd574e9bcc7dd',
+            client_id='{client}',
             artifacts='Windows.System.PowerShell',
             env=dict(Command=Command))
 
@@ -141,13 +139,48 @@ def powershell(config):
         max_wait=1,
         max_row=100,
         Query=[api_pb2.VQLRequest(
-            Name="powershell",
+            Name="download",
             VQL=vql_query)]
     )
-    
     # response processing
     for response in stub.Query(request):
-        print(response)
+        if "Not Found" in response.Response:
+            return 1
+    return 0
+
+
+# installs an application on a specific client
+def installation(config, client, app):
+    channel = _connect_(config)
+    # query definition
+    vql_query = f'''
+        LET Command = "cd 'C:/Users/Public/Downloads'; msiexec /i '{app}.msi'"
+        LET collection <= collect_client(
+            client_id='{client}',
+            artifacts='Windows.System.PowerShell',
+            env=dict(Command=Command))
+
+        LET _ <= SELECT *
+        FROM watch_monitoring(artifact='System.Flow.Completion')
+        WHERE FlowId = collection.flow_id
+        LIMIT 1 
+
+        SELECT *
+        FROM source(client_id=collection.request.client_id,
+                    flow_id=collection.flow_id,
+                    artifact='Windows.System.PowerShell')
+        '''
+    # query execution
+    stub = api_pb2_grpc.APIStub(channel)
+    request = api_pb2.VQLCollectorArgs(
+        max_wait=1,
+        max_row=100,
+        Query=[api_pb2.VQLRequest(
+            Name="download",
+            VQL=vql_query)]
+    )
+    # response processing
+    for response in stub.Query(request):
         if response.Response:
             package = json.loads(response.Response)
     return package
