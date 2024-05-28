@@ -4,3 +4,6 @@ __pycache__/
 
 # Some testing files
 tests.py
+
+# diagrams
+assets/
