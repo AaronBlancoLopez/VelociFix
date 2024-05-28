@@ -15,6 +15,15 @@ For this prototype to function correctly in your business or home environment, t
 
 ## How it works
 
+Velociraptor provides an API that allows to manage and schedule collections remotely and without having to access the GUI.
+
+On the other hand, [PyVelociraptor](https://pypi.org/project/pyvelociraptor/) provides the python bindings to that API, so you can script those collections.
+
+With this tools, VelociFix schedules and executes specific collections related to apps installed in every Windows client monitored. The information retrived is later used to serch for vulnerabilities in the [National Vulnerabilities Database](https://nvd.nist.gov/) hosted by the NIST, wich you can also access throug their API. 
+
+![Diagram](./assets/VelociFix1.svg)
+
+
 ## Server configuration
 As shown in the [previous](./README.md#how-it-works) section, for this PoC to be able to perform both detection and patching of vulnerabilities, a server must be configured to serve as the storage for all the .msi files that will contain the latest versions.
 
