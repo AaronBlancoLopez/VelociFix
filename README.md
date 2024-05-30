@@ -19,10 +19,31 @@ Velociraptor provides an API that allows to manage and schedule collections remo
 
 On the other hand, [PyVelociraptor](https://pypi.org/project/pyvelociraptor/) provides the python bindings to that API, so you can script those collections.
 
+### Detection
+
 With this tools, VelociFix schedules and executes specific collections related to apps installed in every Windows client monitored. The information retrived is later used to serch for vulnerabilities in the [National Vulnerabilities Database](https://nvd.nist.gov/) hosted by the NIST, wich you can also access throug their API. 
 
-![Diagram](./assets/VelociFix1.svg)
+<p align="center" width="100%">
+    <img src="./assets/VelociFixArch.svg">
+</p>
 
+As you can see in the diagram, the Velociraptor service and Velocifix may or may not be running on the same machine, but this shouldn't be any problem if they are configured properly.
+
+This flow covers only the first part of the functionality, where possible vulnerabilities are detected. At the end of this process, a .docx file is generated as a report, containing relevant info of the client, the software installed and the vulnerabilities found.
+
+### Patching
+
+The second part is to be able to download and install the latest version of any vulnerable software installed on the client.
+
+VelociFix proposes a dinamically-filled server/repository as a solution. This repository is fed with .msi files that must be manually downloaded and stored in it by the administrator or some priviledge member.
+
+In this [guide]() an apache2 server is configured to represent the repository, wich only allowed endpoints can access as the server is configured with certificate validation. Self-signed client certificates **must** be previously created and distributed to the clients.
+
+<p align="center" width="100%">
+    <img src="./assets/VelociFixSequence.svg">
+</p>
+
+The above diagram represents a common use case, where the requested app is not stored in the server, so it has to be filled by an administrator. 
 
 ## Server configuration
 As shown in the [previous](./README.md#how-it-works) section, for this PoC to be able to perform both detection and patching of vulnerabilities, a server must be configured to serve as the storage for all the .msi files that will contain the latest versions.
