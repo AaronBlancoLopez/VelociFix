@@ -9,14 +9,33 @@ import velociraptorQueryManager as vqm
 
 from termcolor import colored
 from simple_term_menu import TerminalMenu
-from pprint import pprint
-from pprint import PrettyPrinter
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
 
+severity_ranking = {
+    'HIGH': 3,
+    'MEDIUM': 2,
+    'LOW': 1,
+}
+
 apiKey = "5c3e4e6f-5df1-40bc-b109-f670eb19e8fb"
+
+def art():
+    print("""
+                                                                                
+@@@  @@@  @@@@@@@@  @@@        @@@@@@    @@@@@@@  @@@  @@@@@@@@  @@@  @@@  @@@  
+@@@  @@@  @@@@@@@@  @@@       @@@@@@@@  @@@@@@@@  @@@  @@@@@@@@  @@@  @@@  @@@  
+@@!  @@@  @@!       @@!       @@!  @@@  !@@       @@!  @@!       @@!  @@!  !@@  
+!@!  @!@  !@!       !@!       !@!  @!@  !@!       !@!  !@!       !@!  !@!  @!!  
+@!@  !@!  @!!!:!    @!!       @!@  !@!  !@!       !!@  @!!!:!    !!@   !@@!@!   
+!@!  !!!  !!!!!:    !!!       !@!  !!!  !!!       !!!  !!!!!:    !!!    @!!!    
+:!:  !!:  !!:       !!:       !!:  !!!  :!!       !!:  !!:       !!:   !: :!!   
+ ::!!:!   :!:        :!:      :!:  !:!  :!:       :!:  :!:       :!:  :!:  !:!  
+  ::::     :: ::::   :: ::::  ::::: ::   ::: :::   ::   ::        ::   ::  :::  
+   :      : :: ::   : :: : :   : :  :    :: :: :  :     :        :     :   ::""")
+    input("\n\n\nPress any key to continue...")
 
 # writes the apps information to a .docx file
 def appsInfoToDOCX(doc, data):
@@ -45,7 +64,6 @@ def appsInfoToDOCX(doc, data):
             row_cells[0].text = item.get('Publisher') or 'N/A'
             row_cells[1].text = item.get('DisplayName') or 'N/A'
             row_cells[2].text = item.get('DisplayVersion') or 'N/A'
-            
             # Center the text in each cell
             for cell in row_cells:
                 for paragraph in cell.paragraphs:
@@ -71,19 +89,72 @@ def clientInfoToDOCX(doc, clientInfo):
             doc.add_paragraph()
 
 
+def set_bold(run, bold=True):
+    run.bold = bold
+
+def set_color(run, color):
+    run.font.color.rgb = color
+
 # writes the vulnerabilities information to the .docx report
 def vulnerabilitiesToDOCX(doc, vulnerabilities, app, version):
     doc.add_page_break()
-    doc.add_heading(f"Vulnerabilities for {app} {version}", level=1)
+    heading = doc.add_heading(f"Vulnerabilities for {app} {version}", level=1)
+    for run in heading.runs:
+        set_bold(run)
+
     for vuln in vulnerabilities:
-        doc.add_heading(vuln['CVE ID'], level=2)
-        doc.add_paragraph(f"Base severity: {vuln['Base severity']}")
-        doc.add_paragraph(f"Description: {vuln['Description']}")
-        doc.add_paragraph(f"Exploitability score: {vuln['Exploitability score']}")
-        doc.add_paragraph(f"Impact score: {vuln['Impact score']}")
-        doc.add_paragraph(f"Weaknesses: {vuln['Weaknesses']}")
-        doc.add_paragraph(f"Link: {vuln['Link']}")
-        doc.add_paragraph()
+        heading = doc.add_heading(str(vuln['CVE ID']), level=2)
+        for run in heading.runs:
+            set_bold(run)
+
+        # Base severity
+        severity_para = doc.add_paragraph()
+        severity_run = severity_para.add_run("Base severity: ")
+        set_bold(severity_run)
+        value_run = severity_para.add_run(str(vuln['Base severity']))
+        if str(vuln['Base severity']).upper() == "HIGH":
+            set_color(value_run, RGBColor(255, 0, 0))  # Red color
+        elif str(vuln['Base severity']).upper() == "MEDIUM":
+            set_color(value_run, RGBColor(255, 165, 0))
+        elif str(vuln['Base severity']).upper() == "LOW":
+            set_color(value_run, RGBColor(255, 255, 0))
+        
+        # Description
+        description_para = doc.add_paragraph()
+        description_run = description_para.add_run("Description: ")
+        set_bold(description_run)
+        description_para.add_run(str(vuln['Description']))
+
+        # Exploitability score
+        exploitability_para = doc.add_paragraph()
+        exploitability_run = exploitability_para.add_run("Exploitability score: ")
+        set_bold(exploitability_run)
+        exploitability_para.add_run(str(vuln['Exploitability score']))
+
+        # Impact score
+        impact_para = doc.add_paragraph()
+        impact_run = impact_para.add_run("Impact score: ")
+        set_bold(impact_run)
+        impact_para.add_run(str(vuln['Impact score']))
+
+        # Weaknesses
+        weaknesses_para = doc.add_paragraph()
+        weaknesses_run = weaknesses_para.add_run("Weaknesses: ")
+        set_bold(weaknesses_run)
+        weaknesses_para.add_run(str(vuln['Weaknesses']))
+
+        # Link
+        link_para = doc.add_paragraph()
+        link_run = link_para.add_run("Link: ")
+        set_bold(link_run)
+        link_para.add_run(str(vuln['Link']))
+
+        doc.add_paragraph()  # Add an empty paragraph for spacing
+
+
+def order_vulnerabilities_by_severity(vulnerabilities):
+    # Convert severity to uppercase to handle any case differences
+    return sorted(vulnerabilities, key=lambda vuln: severity_ranking.get(vuln['Base severity'].upper(), 0), reverse=True)
 
 
 # retrieves the possible CPEs for a given app name and version
@@ -146,14 +217,17 @@ def fetch_cve_details(cpe_string):
 
 
 def main():
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str,
-                        help='Path to the api_client config. You can generate such '
-                        'a file with "velociraptor config api_client"')
+                        help='Path to the api_client configuration file. You can generate such file with "velociraptor config api_client"')
     args = parser.parse_args()
+
+    art()
+
     # main menu configuration
     main_menu_title = "  Main Menu.\n  Press Q or Esc to quit. \n"
-    main_menu_items = ["See connected clients", "Scan client", "Third Item", "Quit"]
+    main_menu_items = ["See connected clients", "Scan client", "Quit"]
     main_menu_cursor = "> "
     main_menu_cursor_style = ("fg_red", "bold")
     main_menu_style = ("bg_red", "fg_yellow")
@@ -212,7 +286,6 @@ def main():
             # print the apps and search for possible CVEs
             max_name_length = max(len(app['DisplayName']) for app in apps_32 + apps_64)
             vulnerable = []
-
             # apps review loop
             for app in apps_32:
                 name = ' '.join(app['DisplayName'].split()[:2])
@@ -220,7 +293,8 @@ def main():
                 if cpe := find_cpes(name, version):
                     vulnerable.append(name)
                     cves = fetch_cve_details(cpe)
-                    vulnerabilitiesToDOCX(doc, cves, app['DisplayName'], version)
+                    cves_Sorted = order_vulnerabilities_by_severity(cves)
+                    vulnerabilitiesToDOCX(doc, cves_Sorted, app['DisplayName'], version)
                     print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
                     break # change to continue to show all vulnerable apps
                 print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
@@ -267,55 +341,7 @@ def main():
 
 
         # third option: do something else
-        elif main_sel == 2:
-            clients = vqm.getClients(args.config)
-            print("Select a client to scan:\n")
-
-            # client menu configuration
-            client_menu = TerminalMenu(
-                menu_entries=clients,
-                title="Select a client to scan",
-                menu_cursor=main_menu_cursor,
-                menu_cursor_style=main_menu_cursor_style,
-                menu_highlight_style=main_menu_style,
-                cycle_cursor=True,
-                clear_screen=True,
-            )
-            client_sel = client_menu.show()
-
-            client_info = vqm.getClientInfo(args.config, clients[client_sel])
-
-            # .docx creation from JSON data
-            doc = Document()
-            doc.add_heading('Client Information Report', 0)
-
-            clientInfoToDOCX(doc, client_info)
-
-            client_abreviation = clients[client_sel].split(".")[1]
-            doc.save(f"{client_abreviation}_Information_Report.docx")
-
-            input("\n\nPress Enter to go back to the main menu...")
-
-        elif main_sel == 3:
-            clients = vqm.getClients(args.config)
-            print("Powershell: \n")
-
-            # client menu configuration
-            client_menu = TerminalMenu(
-                menu_entries=clients,
-                title="Select a client to scan",
-                menu_cursor=main_menu_cursor,
-                menu_cursor_style=main_menu_cursor_style,
-                menu_highlight_style=main_menu_style,
-                cycle_cursor=True,
-                clear_screen=True,
-            )
-            client_sel = client_menu.show()
-            response = vqm.installation(args.config, clients[client_sel], "powershell")
-            print(response)
-            input("\n\nPress Enter to go back to the main menu...")
-
-        elif main_sel == 4 or main_sel == None:
+        elif main_sel == 2 or main_sel == None:
             main_menu_exit = True
             print("Quit Selected")
 
