@@ -20,8 +20,6 @@ severity_ranking = {
     'LOW': 1,
 }
 
-apiKey = "5c3e4e6f-5df1-40bc-b109-f670eb19e8fb"
-
 def art():
     print("""
                                                                                 
@@ -35,7 +33,10 @@ def art():
  ::!!:!   :!:        :!:      :!:  !:!  :!:       :!:  :!:       :!:  :!:  !:!  
   ::::     :: ::::   :: ::::  ::::: ::   ::: :::   ::   ::        ::   ::  :::  
    :      : :: ::   : :: : :   : :  :    :: :: :  :     :        :     :   ::""")
+    print("\n\n\nPlease understand that this is a proof of concept intended to test the extensibility of the Velociraptor SIEM.")
+    print("Code might contain bugs.")
     input("\n\n\nPress any key to continue...")
+
 
 # writes the apps information to a .docx file
 def appsInfoToDOCX(doc, data):
@@ -221,6 +222,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str,
                         help='Path to the api_client configuration file. You can generate such file with "velociraptor config api_client"')
+    parser.add_argument('--repository', type=str,
+                        help='URL of the repository where the apps are stored. Do not include the last backslash ("/"). This is an optional parameter, but you will only get the vulnerability detection report, as patching can not be done without the repository.')
     args = parser.parse_args()
 
     art()
@@ -319,28 +322,34 @@ def main():
                 print(colored(f"\n\n[!] {len(vulnerable)} vulnerable applications found", "red"))
                 for app in vulnerable:
                     print(colored(f"    - {app}", "red"))
-                option = input("\nWould you like to try to update the vulnerable applications? (y/n): ")
-                if option.lower() == "y":
-                    for app in vulnerable:
-                        print(f"Trying to update {app}...")
-                        # the standard in the repository is the app name with spaces replaced by underscores
-                        # the same way the app is searched in the NVD database, but with the replacement
-                        app = app.replace(" ", "_")
-                        print(f"Searching for {app}...")
-                        if(response := vqm.download(args.config, clients[client_sel], app) == 1):
-                            print("The app is not currently available in the repository.")
-                            continue
-                        vqm.installation(args.config, clients[client_sel], app)
-                        print(colored(f"{app} updated successfully!", "green"))
+                if args.repository:
+                    repository = args.repository
+                    option = input("\nWould you like to try to update the vulnerable applications? (y/n): ")
+                    if option.lower() == "y":
+                        for app in vulnerable:
+                            print(f"\nTrying to update {app}...")
+                            # the standard in the repository is the app name with spaces replaced by underscores
+                            # the same way the app is searched in the NVD database, but with the replacement
+                            app = app.replace(" ", "_")
+                            print(f"Searching for {app}...")
+                            if(response := vqm.download(args.config, clients[client_sel], app, repository) == 1):
+                                print("The app is not currently available in the repository.")
+                                continue
+                            vqm.installation(args.config, clients[client_sel], app)
+                            print(colored(f"{app} updated successfully!", "green"))
+                    else:
+                        print("Exiting...")
                 else:
-                    print("Exiting...")
+                    print('\033[38;2;255;165;0m' + "\n\n[!] No repository URL was provided. Vulnerable applications can not be updated." + '\033[0m')
+                    input("\n\nPress any key to exit...")
+                    break
             else:
                 print(colored("\n\n[+] No vulnerable applications found", "green"))
             
             input("\n\nPress Enter to go back to the main menu...")
 
 
-        # third option: do something else
+        # exit the program
         elif main_sel == 2 or main_sel == None:
             main_menu_exit = True
             print("Quit Selected")

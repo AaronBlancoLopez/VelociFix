@@ -113,11 +113,11 @@ def getApps(config, client):
 
 
 # downloads a file from the app repository to a specific client
-def download(config, client, app):
+def download(config, client, app, repository):
     channel = _connect_(config)
     # query definition
     vql_query = f'''
-        LET Command = "pwsh -Command '$cert=Get-ChildItem -Path Cert:\\\LocalMachine\\\My; Invoke-WebRequest -SkipCertificateCheck -Uri https://192.168.190.131/files/{app}.msi -Certificate $cert -OutFile \\"C:/Users/Public/Downloads/\\"'"
+        LET Command = "pwsh -Command '$cert=Get-ChildItem -Path Cert:\\\LocalMachine\\\My; Invoke-WebRequest -SkipCertificateCheck -Uri {repository}/{app}.msi -Certificate $cert -OutFile \\"C:/\\"'"
         LET collection <= collect_client(
             client_id='{client}',
             artifacts='Windows.System.PowerShell',
@@ -144,6 +144,7 @@ def download(config, client, app):
     )
     # response processing
     for response in stub.Query(request):
+        print(response.Response)
         if "Not Found" in response.Response:
             return 1
     return 0
@@ -154,7 +155,7 @@ def installation(config, client, app):
     channel = _connect_(config)
     # query definition
     vql_query = f'''
-        LET Command = "cd 'C:/Users/Public/Downloads'; msiexec /i '{app}.msi'"
+        LET Command = "cd 'C:/'; msiexec /i '{app}.msi'"
         LET collection <= collect_client(
             client_id='{client}',
             artifacts='Windows.System.PowerShell',
@@ -182,5 +183,6 @@ def installation(config, client, app):
     # response processing
     for response in stub.Query(request):
         if response.Response:
+            print(response.Response)
             package = json.loads(response.Response)
     return package
