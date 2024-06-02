@@ -143,11 +143,13 @@ def download(config, client, app, repository):
             VQL=vql_query)]
     )
     # response processing
+    print(f"\n Looking at for {repository}/{app}.msi")
     for response in stub.Query(request):
-        print(response.Response)
-        if "Not Found" in response.Response:
+        if 'Not Found' in response.Response:
             return 1
-    return 0
+        elif '"Stderr":""' in response.Response:
+            return 0
+    return -1
 
 
 # installs an application on a specific client
@@ -172,6 +174,7 @@ def installation(config, client, app):
                     artifact='Windows.System.PowerShell')
         '''
     # query execution
+    print(f"\n Installing {app} on {client}")
     stub = api_pb2_grpc.APIStub(channel)
     request = api_pb2.VQLCollectorArgs(
         max_wait=1,
@@ -183,6 +186,5 @@ def installation(config, client, app):
     # response processing
     for response in stub.Query(request):
         if response.Response:
-            print(response.Response)
             package = json.loads(response.Response)
     return package

@@ -21,8 +21,7 @@ severity_ranking = {
 }
 
 def art():
-    print("""
-                                                                                
+    print("""                                                          
 @@@  @@@  @@@@@@@@  @@@        @@@@@@    @@@@@@@  @@@  @@@@@@@@  @@@  @@@  @@@  
 @@@  @@@  @@@@@@@@  @@@       @@@@@@@@  @@@@@@@@  @@@  @@@@@@@@  @@@  @@@  @@@  
 @@!  @@@  @@!       @@!       @@!  @@@  !@@       @@!  @@!       @@!  @@!  !@@  
@@ -32,7 +31,8 @@ def art():
 :!:  !!:  !!:       !!:       !!:  !!!  :!!       !!:  !!:       !!:   !: :!!   
  ::!!:!   :!:        :!:      :!:  !:!  :!:       :!:  :!:       :!:  :!:  !:!  
   ::::     :: ::::   :: ::::  ::::: ::   ::: :::   ::   ::        ::   ::  :::  
-   :      : :: ::   : :: : :   : :  :    :: :: :  :     :        :     :   ::""")
+   :      : :: ::   : :: : :   : :  :    :: :: :  :     :        :     :   ::
+    """)
     print("\n\n\nPlease understand that this is a proof of concept intended to test the extensibility of the Velociraptor SIEM.")
     print("Code might contain bugs.")
     input("\n\n\nPress any key to continue...")
@@ -102,58 +102,51 @@ def vulnerabilitiesToDOCX(doc, vulnerabilities, app, version):
     heading = doc.add_heading(f"Vulnerabilities for {app} {version}", level=1)
     for run in heading.runs:
         set_bold(run)
-
     for vuln in vulnerabilities:
         heading = doc.add_heading(str(vuln['CVE ID']), level=2)
         for run in heading.runs:
             set_bold(run)
-
         # Base severity
         severity_para = doc.add_paragraph()
         severity_run = severity_para.add_run("Base severity: ")
         set_bold(severity_run)
         value_run = severity_para.add_run(str(vuln['Base severity']))
         if str(vuln['Base severity']).upper() == "HIGH":
-            set_color(value_run, RGBColor(255, 0, 0))  # Red color
+            set_color(value_run, RGBColor(255, 0, 0)) 
         elif str(vuln['Base severity']).upper() == "MEDIUM":
             set_color(value_run, RGBColor(255, 165, 0))
         elif str(vuln['Base severity']).upper() == "LOW":
             set_color(value_run, RGBColor(255, 255, 0))
-        
         # Description
         description_para = doc.add_paragraph()
         description_run = description_para.add_run("Description: ")
         set_bold(description_run)
         description_para.add_run(str(vuln['Description']))
-
         # Exploitability score
         exploitability_para = doc.add_paragraph()
         exploitability_run = exploitability_para.add_run("Exploitability score: ")
         set_bold(exploitability_run)
         exploitability_para.add_run(str(vuln['Exploitability score']))
-
         # Impact score
         impact_para = doc.add_paragraph()
         impact_run = impact_para.add_run("Impact score: ")
         set_bold(impact_run)
         impact_para.add_run(str(vuln['Impact score']))
-
         # Weaknesses
         weaknesses_para = doc.add_paragraph()
         weaknesses_run = weaknesses_para.add_run("Weaknesses: ")
         set_bold(weaknesses_run)
         weaknesses_para.add_run(str(vuln['Weaknesses']))
-
         # Link
         link_para = doc.add_paragraph()
         link_run = link_para.add_run("Link: ")
         set_bold(link_run)
         link_para.add_run(str(vuln['Link']))
+        doc.add_paragraph()  
 
-        doc.add_paragraph()  # Add an empty paragraph for spacing
 
-
-def order_vulnerabilities_by_severity(vulnerabilities):
+# orders vulnerabilities by severity
+def order_vulnerabilities(vulnerabilities):
     # Convert severity to uppercase to handle any case differences
     return sorted(vulnerabilities, key=lambda vuln: severity_ranking.get(vuln['Base severity'].upper(), 0), reverse=True)
 
@@ -252,7 +245,7 @@ def main():
 
         # FIRST OPTION: lists all currently connected clients
         if main_sel == 0:
-            print("List of currently connected clients:\n")
+            print(" List of currently connected clients:\n")
             for client in vqm.getClients(args.config):
                 print("- " + client)
             input("\n\nPress Enter to go back to the main menu...")
@@ -285,7 +278,7 @@ def main():
             # remember 32 and 64 bit apps are separated
             apps_32 = apps[0]
             apps_64 = apps[1]
-            print("List of installed applications:\n")
+            print(" List of installed applications:\n")
             # print the apps and search for possible CVEs
             max_name_length = max(len(app['DisplayName']) for app in apps_32 + apps_64)
             vulnerable = []
@@ -296,11 +289,11 @@ def main():
                 if cpe := find_cpes(name, version):
                     vulnerable.append(name)
                     cves = fetch_cve_details(cpe)
-                    cves_Sorted = order_vulnerabilities_by_severity(cves)
+                    cves_Sorted = order_vulnerabilities(cves)
                     vulnerabilitiesToDOCX(doc, cves_Sorted, app['DisplayName'], version)
-                    print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
+                    print(colored(" - {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
                     break # change to continue to show all vulnerable apps
-                print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
+                print(" - {:{}} {}".format(app['DisplayName'], max_name_length, version))
             
             # COMMENTED FOR TESTING
             # for app in apps_64:
@@ -319,40 +312,41 @@ def main():
             doc.save(f"{client_abreviation}_Information_Report.docx")
 
             if vulnerable:
-                print(colored(f"\n\n[!] {len(vulnerable)} vulnerable applications found", "red"))
+                print(colored(f"\n\n [!] {len(vulnerable)} vulnerable applications found", "red"))
                 for app in vulnerable:
                     print(colored(f"    - {app}", "red"))
-                if args.repository:
-                    repository = args.repository
-                    option = input("\nWould you like to try to update the vulnerable applications? (y/n): ")
-                    if option.lower() == "y":
+                option = input("\n Would you like to try to update the vulnerable applications? (y/n): ")
+                if option.lower() == "y":
+                    if args.repository:               
                         for app in vulnerable:
-                            print(f"\nTrying to update {app}...")
+                            print(f"\n Trying to update {app}...")
                             # the standard in the repository is the app name with spaces replaced by underscores
                             # the same way the app is searched in the NVD database, but with the replacement
                             app = app.replace(" ", "_")
-                            print(f"Searching for {app}...")
-                            if(response := vqm.download(args.config, clients[client_sel], app, repository) == 1):
-                                print("The app is not currently available in the repository.")
+                            response = vqm.download(args.config, clients[client_sel], app, args.repository)
+                            if(response == 1):
+                                print(colored(f" [!] The file {app}.msi was not found in the given repository.\nPlease try it again later.", "red"))
                                 continue
+                            elif(response == -1):
+                                print(colored(""))
+                            print(colored(f" [+] {app} downloaded successfully!\n", "green"))
                             vqm.installation(args.config, clients[client_sel], app)
-                            print(colored(f"{app} updated successfully!", "green"))
+                            print(colored(f"\n [+] {app} updated successfully!", "green"))
+                        print("\n You can find a report of the scan on this folder called by the name of the client's ID. ")
+                        input(" Press any key to exit...")
                     else:
-                        print("Exiting...")
+                        print('\033[38;2;255;165;0m' + "\n\n [!] No repository URL was provided. Vulnerable applications can not be updated." + '\033[0m')
                 else:
-                    print('\033[38;2;255;165;0m' + "\n\n[!] No repository URL was provided. Vulnerable applications can not be updated." + '\033[0m')
-                    input("\n\nPress any key to exit...")
-                    break
+                    print("\n You can find a report of the scan on this folder called by the name of the client's ID. ")
+                    input(" Press any key to exit...")
             else:
-                print(colored("\n\n[+] No vulnerable applications found", "green"))
-            
-            input("\n\nPress Enter to go back to the main menu...")
+                print(colored("\n\n [+] No vulnerable applications found", "green"))
 
 
         # exit the program
         elif main_sel == 2 or main_sel == None:
             main_menu_exit = True
-            print("Quit Selected")
+            print(" Quit Selected")
 
 
 
