@@ -151,6 +151,13 @@ def order_vulnerabilities(vulnerabilities):
     return sorted(vulnerabilities, key=lambda vuln: severity_ranking.get(vuln['Base severity'].upper(), 0), reverse=True)
 
 
+# checks if the first two words of a string are alphabetic
+def first_two_words(string):
+    elements = string.split()
+    if len(elements) >= 2 and elements[0].isalpha() and elements[1].isalpha():
+        return 1
+    return 0
+
 # retrieves the possible CPEs for a given app name and version
 def find_cpes(name, version):
     base_url = "https://nvd.nist.gov/products/cpe/search/results"
@@ -284,7 +291,10 @@ def main():
             vulnerable = []
             # apps review loop
             for app in apps_32:
-                name = ' '.join(app['DisplayName'].split()[:2])
+                if first_two_words(app['DisplayName']):
+                    name = ' '.join(app['DisplayName'].split()[:2])
+                else:
+                    name = app['DisplayName'].split()[0]
                 version = app['DisplayVersion']
                 if cpe := find_cpes(name, version):
                     vulnerable.append(name)
@@ -302,6 +312,7 @@ def main():
             #     if cpe := find_cpes(name, version):
             #         vulnerable.append(name)
             #         cves = fetch_cve_details(cpe)
+            #         cves_Sorted = order_vulnerabilities(cves)
             #         # TODO: write the vulnerabilities to the .docx file
             #         print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
             #         continue
