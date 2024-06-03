@@ -46,11 +46,24 @@ In this [guide]() an apache2 server is configured to represent the repository, w
 The above diagram represents a common use case, where the requested app is not stored in the server, so it has to be filled by an administrator. 
 
 ## Server configuration
+
 As shown in the [previous](./README.md#how-it-works) section, for this PoC to be able to perform both detection and patching of vulnerabilities, a server must be configured to serve as the storage for all the .msi files that will contain the latest versions.
 
-You can read a full guide on how to configure this server [here]().
+This server will be configured with **mutual authentication**, so we have a way to control the acccess to the repository without having to store any kind of username/password. **Only clients who present the certificate will be allowed to access the repository**.
+
+You can read a full guide on how to configure an apache server with mutual authentication [here](https://www.openlogic.com/blog/mutual-authentication-using-apache-and-web-client).
+
+To test that your server is properly configured, you can try to access the repository and check that selecting the right certificate allows the connection to establish.
+
+### Some mandatory rules
+
+Once the server is up and working fine with mutual authentication, some extra configurations need to be taken in count:
+
+1. The Velocirator queries (VQL) run through the `SYSTEM` user. This means we need to install the client certificate on the `\LocalMachine` folder of this user for the web requests to work.
+2. As web requests are done automatically, a standard has to be set to control the names the apps will be given in the repository, so that the URL of the request is built properly. **If not, apps stored in the server may not be found**. In this way, the standard established is to use the first two (or only first, if second element is not a word) words of the name the software appears with in the generated report (which is the same as the *'DisplayName'* field of the app in the registry) with the space replaced by '_'. E.g. Mozilla Firefox (x64 es-ES) will be stored with the name Mozilla_Firefox.
 
 ## Installation
+
 Start by clonning the repository.
 ```
 git clone https://github.com/AaronBlancoLopez/VelociFix.git
@@ -62,9 +75,10 @@ pip3 install -r requirements.txt
 ```
 
 ## Usage
+
 Once installed, you can start using Velocifix by simply running:
 ```
-sudo python3 main.py --config [path to API file]
+sudo python3 main.py --config [path to API file] --repository [optional][server URL]
 ```
 If everything worked fine, you should be presented with a terminal menu with two options.
 
