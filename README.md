@@ -60,7 +60,7 @@ To test that your server is properly configured, you can try to access the repos
 Once the server is up and working fine with mutual authentication, some extra configurations need to be taken in count:
 
 1. The Velocirator queries (VQL) run through the `SYSTEM` user. This means we need to install the client certificate on the `\LocalMachine` folder of this user for the web requests to work.
-2. As web requests are done automatically, a standard has to be set to control the names the apps will be given in the repository, so that the URL of the request is built properly. **If not, apps stored in the server may not be found**. In this way, the standard established is to use the first two (or only first, if second element is not a word) words of the name the software appears with in the generated report (which is the same as the *'DisplayName'* field of the app in the registry) with the space replaced by '_'. E.g. Mozilla Firefox (x64 es-ES) will be stored with the name Mozilla_Firefox. You can use
+2. As web requests are done automatically, a standard has to be set to control the names the apps will be given in the repository, so that the URL of the request is built properly. **If not, apps stored in the server may not be found**. In this way, the standard established is to use the first two (or only first, if second element is not a word) words of the name the software appears with in the generated report (which is the same as the *'DisplayName'* field of the app in the registry) with the space replaced by '_'. E.g. Mozilla Firefox (x64 es-ES) will be stored with the name Mozilla_Firefox. You can use the [monitor](monitor.py) script to see more clearly what applications are being requested to the server.
 
 ## Installation
 
