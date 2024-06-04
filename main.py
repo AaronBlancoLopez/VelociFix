@@ -38,6 +38,17 @@ def art():
     input("\n\n\nPress any key to continue...")
 
 
+# allows to change the color a row to red if the app is vulnerable
+def changeRowColor(doc, field_name, color):
+    for table in doc.tables:
+        for row in table.rows:
+            if any(field_name in cell.text for cell in row.cells):
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.font.color.rgb = color
+
+
 # writes the apps information to a .docx file
 def appsInfoToDOCX(doc, data):
     doc.add_page_break()
@@ -300,6 +311,7 @@ def main():
                     vulnerable.append(name)
                     cves = fetch_cve_details(cpe)
                     cves_Sorted = order_vulnerabilities(cves)
+                    changeRowColor(doc, app['DisplayName'], RGBColor(255, 0, 0))
                     vulnerabilitiesToDOCX(doc, cves_Sorted, app['DisplayName'], version)
                     print(colored(" - {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
                     break # change to continue to show all vulnerable apps

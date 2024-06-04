@@ -143,7 +143,7 @@ def download(config, client, app, repository):
             VQL=vql_query)]
     )
     # response processing
-    print(f"\n Looking at for {repository}/{app}.msi")
+    print(f" Looking for {repository}/{app}.msi")
     for response in stub.Query(request):
         if 'Not Found' in response.Response:
             return 1
