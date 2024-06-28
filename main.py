@@ -302,10 +302,27 @@ def main():
             vulnerable = []
             # apps review loop
             for app in apps_32:
+            
                 if first_two_words(app['DisplayName']):
                     name = ' '.join(app['DisplayName'].split()[:2])
                 else:
                     name = app['DisplayName'].split()[0]
+                version = app['DisplayVersion']
+                # if cpe is found for given keywords, CVEs are fetched 
+                # and written to the .docx file
+                if cpe := find_cpes(name, version):
+                    vulnerable.append(name)
+                    cves = fetch_cve_details(cpe)
+                    cves_Sorted = order_vulnerabilities(cves)
+                    changeRowColor(doc, app['DisplayName'], RGBColor(255, 0, 0))
+                    vulnerabilitiesToDOCX(doc, cves_Sorted, app['DisplayName'], version)
+                    print(colored(" - {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
+                    continue
+                print(" - {:{}} {}".format(app['DisplayName'], max_name_length, version))
+            
+
+            for app in apps_64:
+                name = ' '.join(app['DisplayName'].split()[:2])
                 version = app['DisplayVersion']
                 if cpe := find_cpes(name, version):
                     vulnerable.append(name)
@@ -314,26 +331,14 @@ def main():
                     changeRowColor(doc, app['DisplayName'], RGBColor(255, 0, 0))
                     vulnerabilitiesToDOCX(doc, cves_Sorted, app['DisplayName'], version)
                     print(colored(" - {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
-                    break # change to continue to show all vulnerable apps
-                print(" - {:{}} {}".format(app['DisplayName'], max_name_length, version))
-            
-            # COMMENTED FOR TESTING
-            # for app in apps_64:
-            #     name = ' '.join(app['DisplayName'].split()[:2])
-            #     version = app['DisplayVersion']
-            #     if cpe := find_cpes(name, version):
-            #         vulnerable.append(name)
-            #         cves = fetch_cve_details(cpe)
-            #         cves_Sorted = order_vulnerabilities(cves)
-            #         # TODO: write the vulnerabilities to the .docx file
-            #         print(colored("- {:{}} {}".format(app['DisplayName'], max_name_length, version), "red"))
-            #         continue
-            #     print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
+                    continue
+                print("- {:{}} {}".format(app['DisplayName'], max_name_length, version))
 
-            # save the .docx file
+            # save the .docx file with name clientID_Information_Report.docx
             client_abreviation = clients[client_sel].split(".")[1]
             doc.save(f"{client_abreviation}_Information_Report.docx")
 
+            # check if there are vulnerable apps and ask if the user wants to update them
             if vulnerable:
                 print(colored(f"\n\n [!] {len(vulnerable)} vulnerable applications found", "red"))
                 for app in vulnerable:
