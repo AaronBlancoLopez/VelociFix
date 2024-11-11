@@ -1,0 +1,15 @@
+name: Custom.RetrieveApps
+description: |
+   Retrieve the 'Publisher', 'DisplayName' and 'DisplayVersion' information about all apps installed on a Windows machine.
+
+sources:
+  - name: X64
+    query: |
+        SELECT Publisher, DisplayName, DisplayVersion
+        FROM read_reg_key(globs="HKEY_LOCAL_MACHINE/SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Uninstall/*", accessor="registry")
+        WHERE NOT DisplayVersion=NULL
+  - name: X32
+    query: |
+        SELECT Publisher, DisplayName, DisplayVersion
+        FROM read_reg_key(globs="HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/Uninstall/*", accessor="registry")
+        WHERE NOT DisplayVersion=NULL

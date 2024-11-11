@@ -1,0 +1,8 @@
+docx==0.2.4
+grpcio==1.62.1
+python_docx==1.1.2
+pyvelociraptor==0.1.8
+Requests==2.32.3
+simple_term_menu==1.6.4
+termcolor==2.4.0
+watchdog==4.0.0
